@@ -32,9 +32,9 @@ const put = (map, visit) => {
 }
 
 const report = async () => {
-    const res = await client.query('SELECT * FROM at order by data->>\'statusCode\' desc');
+    const res = await client.query("select * from at");
     const map = new Map();
-    res.rows.forEach((v) => put(map, v));
+    res.rows.filter(v => !v.data.statusCode.toString().startsWith("4")). forEach((v) => put(map, v));
     
     let reportContent = '';
 
