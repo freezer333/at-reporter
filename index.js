@@ -23,7 +23,11 @@ const client = new Client({
 });
 
 const put = (map, visit) => {
-    const key = `${visit.data.method}-${visit.data.statusCode}-${visit.data.url}`;
+    let url = visit.data.url;
+    if (url.includes('?')) {
+        url = url.split('?')[0];
+    }
+    const key = `${visit.data.method}-${visit.data.statusCode}-${url}`;
     if (map.has(key)) {
         map.get(key).push(visit);
     } else {
@@ -35,9 +39,19 @@ const report = async () => {
     const res = await client.query("select * from at");
     const map = new Map();
     res.rows.filter(v => !v.data.statusCode.toString().startsWith("4")). forEach((v) => put(map, v));
+
+    let pageCountReport = '# Page Count Report\n\n';
+    pageCountReport += '| Method | Status Code | URL | Count |\n';
+    pageCountReport += '|--------|-------------|-----|-------|\n';
+
+    map.forEach((value, key) => {
+        const firstVisit = value[0];
+        pageCountReport += `| ${firstVisit.data.method} | ${firstVisit.data.statusCode} | ${firstVisit.data.url} | ${value.length} |\n`;
+    });
+
+    
     
     let reportContent = '';
-
     map.forEach((value, key) => {
         reportContent += `# ${key}\n\n`;
         reportContent += '| Timestamp | Host | User-Agent | Referrer |\n';
@@ -60,7 +74,7 @@ const report = async () => {
     const filename = `report-${date}.html`;
     converter = new showdown.Converter();
     converter.setOption('tables', true);
-    html      = first + converter.makeHtml(reportContent) + after;
+    html      = first  + converter.makeHtml(pageCountReport)+ converter.makeHtml(reportContent) + after;
     fs.writeFileSync(path.join(reportsDir, filename), html);
     
     client.end();
